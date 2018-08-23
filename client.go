@@ -37,6 +37,8 @@ type SentData struct {
 	HDDUsed     uint64  `json:"hdd_used"`
 }
 
+var vnstat string
+
 func main() {
 	// 输出连接
 	fmt.Println("Connecting...")
@@ -69,6 +71,11 @@ func main() {
 	interval, err := cfg.GetValue("Status", "INTERVAL")
 	if nil != err {
 		interval = "1"
+	}
+	// 获取vnstat执行路径
+	vnstat,err=cfg.GetValue("Status","VNSTAT")
+	if nil!=err{
+		log.Fatalf("Can not get vnstat exec path: %s\n",err.Error())
 	}
 	// 组合连接地址
 	addr := server + ":" + port
@@ -273,7 +280,7 @@ func getSpeed() (uint64, uint64) {
 // 获取流量信息
 func getTraffic() (uint64, uint64) {
 	// 使用sh执行vnstat
-	cmd := exec.Command("/bin/sh", "-c", "vnstat --dumpdb")
+	cmd := exec.Command(vnstat, "--dumpdb")
 	// 执行结果输出变量
 	var out bytes.Buffer
 	// 设置输出
