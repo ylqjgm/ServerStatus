@@ -165,7 +165,7 @@ func getMemory() (uint64, uint64) {
 	if nil != err {
 		return 0, 0
 	}
-	return Mem.Total / 1024, (Mem.Total - (Mem.Cached + Mem.Free)) / 1024
+	return Mem.Total / 1024, Mem.Used / 1024
 }
 
 // 获取启动时间
@@ -195,8 +195,6 @@ func getDisk() (uint64, uint64) {
 	}
 	// 总空间及使用空间变量
 	var Total, Used uint64
-	// 分区格式类型
-	FsType := map[string]string{"ext4": "ext4", "ext3": "ext3", "ext2": "ext2", "ext2/ext3": "ext2/ext3", "tmpfs": "tmpfs", "reiserfs": "reiserfs", "jfs": "jfs", "btrfs": "btrfs", "fuseblk": "fuseblk", "zfs": "zfs", "simfs": "simfs", "ntfs": "ntfs", "fat32": "fat32", "exfat": "exfat", "xfs": "xfs",}
 	// 循环所有分区
 	for _, d := range ds {
 		// 读取分区使用情况
@@ -204,13 +202,10 @@ func getDisk() (uint64, uint64) {
 		if nil != err {
 			continue
 		}
-		// 如果是定义的磁盘格式
-		if _, ok := FsType[Disk.Fstype]; ok {
-			// 加上空间总量
-			Total += Disk.Total
-			// 加上使用总量
-			Used += Disk.Used
-		}
+		// 加上空间总量
+		Total += Disk.Total
+		// 加上使用总量
+		Used += Disk.Used
 	}
 	return Total / 1024 / 1024, Used / 1024 / 1024
 }
