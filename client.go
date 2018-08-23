@@ -86,92 +86,118 @@ func main() {
 	}
 	// 组合连接地址
 	addr := server + ":" + port
-	// 连接服务器
-	conn, err := net.Dial("tcp", addr)
-	if nil != err {
-		log.Fatalf("Can not connection server: %s\n", err.Error())
-	}
-	// 关闭连接
-	defer conn.Close()
-	// 定义数据读取变量
-	buf := make([]byte, 1024)
-	// 读取1024字节数据
-	_, err = conn.Read(buf)
-	if nil != err && err != io.EOF {
-		log.Fatalf("Read server data faild: %s\n", err.Error())
-	}
-	// 是否为验证提示
-	if strings.Contains(string(buf), "Authentication required") {
-		// 写入验证
-		_, err := conn.Write([]byte(user + ":" + pass + "\n"))
+	for {
+		// 连接服务器
+		conn, err := net.Dial("tcp", addr)
 		if nil != err {
-			log.Fatalf("Send authentication required faild: %s\n", err.Error())
+			log.Printf("Can not connection server: %s\n", err.Error())
+			// 关闭连接
+			conn.Close()
+			time.Sleep(time.Second * 3)
+			continue
 		}
-		// 读取数据变量
+		// 定义数据读取变量
 		buf := make([]byte, 1024)
 		// 读取1024字节数据
 		_, err = conn.Read(buf)
 		if nil != err && err != io.EOF {
-			log.Fatalf("Read authentication required faild: %s\n", err.Error())
-		}
-		// 是否成功
-		if !strings.Contains(string(buf), "Authentication successful") {
-			log.Fatalf("Authentication required faild: %s\n", string(buf))
-		}
-	}
-	// 直接死循环
-	for {
-		// 获取CPU信息
-		cpuPercent := getCpuPercent()
-		// 获取实时网速
-		rx, tx := getSpeed()
-		// 获取流量
-		nin, nout := getTraffic()
-		// 获取启动时间
-		uptime := getUptime()
-		// 获取CPU负载
-		cpuLoad := getLoad()
-		// 获取内存信息
-		mTotal, mUsed := getMemory()
-		// 获取交换空间信息
-		sTotal, sUsed := getSwap()
-		// 获取磁盘信息
-		dTotal, dUsed := getDisk()
-		// 组合为结构体
-		data := SentData{
-			Uptime:      uptime,
-			Load:        cpuLoad,
-			MemoryTotal: mTotal,
-			MemoryUsed:  mUsed,
-			SwapTotal:   sTotal,
-			SwapUsed:    sUsed,
-			HDDTotal:    dTotal,
-			HDDUsed:     dUsed,
-			Cpu:         cpuPercent,
-			NetworkRx:   rx,
-			NetworkTx:   tx,
-			NetworkIn:   nin,
-			NetworkOut:  nout,
-		}
-		// 转换为Json数据
-		js, err := json.Marshal(data)
-		if nil != err {
-			log.Printf("Can not convert to json: %s", err.Error())
+			log.Printf("Read server data faild: %s\n", err.Error())
+			// 关闭连接
+			conn.Close()
+			time.Sleep(time.Second * 3)
 			continue
 		}
-		// 发送实时数据
-		_, err = conn.Write([]byte("update " + string(js) + "\n"))
-		if nil != err {
-			log.Printf("Can not send data: %s", err.Error())
-			continue
+		// 是否为验证提示
+		if strings.Contains(string(buf), "Authentication required") {
+			// 写入验证
+			_, err := conn.Write([]byte(user + ":" + pass + "\n"))
+			if nil != err {
+				log.Printf("Send authentication required faild: %s\n", err.Error())
+				// 关闭连接
+				conn.Close()
+				time.Sleep(time.Second * 3)
+				continue
+			}
+			// 读取数据变量
+			buf := make([]byte, 1024)
+			// 读取1024字节数据
+			_, err = conn.Read(buf)
+			if nil != err && err != io.EOF {
+				log.Printf("Read authentication required faild: %s\n", err.Error())
+				// 关闭连接
+				conn.Close()
+				time.Sleep(time.Second * 3)
+				continue
+			}
+			// 是否成功
+			if !strings.Contains(string(buf), "Authentication successful") {
+				log.Printf("Authentication required faild: %s\n", string(buf))
+				// 关闭连接
+				conn.Close()
+				time.Sleep(time.Second * 3)
+				continue
+			}
 		}
-		// 转换间隔为时间间隔
-		inter, err := time.ParseDuration(interval)
-		if nil != err {
-			inter = 1
+		// 直接死循环
+		for {
+			// 获取CPU信息
+			cpuPercent := getCpuPercent()
+			// 获取实时网速
+			rx, tx := getSpeed()
+			// 获取流量
+			nin, nout := getTraffic()
+			// 获取启动时间
+			uptime := getUptime()
+			// 获取CPU负载
+			cpuLoad := getLoad()
+			// 获取内存信息
+			mTotal, mUsed := getMemory()
+			// 获取交换空间信息
+			sTotal, sUsed := getSwap()
+			// 获取磁盘信息
+			dTotal, dUsed := getDisk()
+			// 组合为结构体
+			data := SentData{
+				Uptime:      uptime,
+				Load:        cpuLoad,
+				MemoryTotal: mTotal,
+				MemoryUsed:  mUsed,
+				SwapTotal:   sTotal,
+				SwapUsed:    sUsed,
+				HDDTotal:    dTotal,
+				HDDUsed:     dUsed,
+				Cpu:         cpuPercent,
+				NetworkRx:   rx,
+				NetworkTx:   tx,
+				NetworkIn:   nin,
+				NetworkOut:  nout,
+			}
+			// 转换为Json数据
+			js, err := json.Marshal(data)
+			if nil != err {
+				log.Printf("Can not convert to json: %s", err.Error())
+				// 关闭连接
+				conn.Close()
+				time.Sleep(time.Second * 3)
+				break
+			}
+			// 发送实时数据
+			_, err = conn.Write([]byte("update " + string(js) + "\n"))
+			if nil != err {
+				log.Printf("Can not send data: %s", err.Error())
+				// 关闭连接
+				conn.Close()
+				time.Sleep(time.Second * 3)
+				break
+			}
+			// 转换间隔为时间间隔
+			inter, err := time.ParseDuration(interval)
+			if nil != err {
+				inter = 1
+			}
+			// 间隔
+			time.Sleep(time.Second * inter)
 		}
-		// 间隔
-		time.Sleep(time.Second * inter)
 	}
 }
 
