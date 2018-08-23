@@ -18,6 +18,8 @@ import (
 	"encoding/json"
 	"github.com/Unknwon/goconfig"
 	"log"
+	"path/filepath"
+	"os"
 )
 
 // 发送数据Json结构体
@@ -42,8 +44,13 @@ var vnstat string
 func main() {
 	// 输出连接
 	fmt.Println("Connecting...")
+	// 获取程序执行路径
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if nil != err {
+		log.Fatalf("Can not find config file: %s\n", err.Error())
+	}
 	// 读取配置文件
-	cfg, err := goconfig.LoadConfigFile("status.ini")
+	cfg, err := goconfig.LoadConfigFile(dir + "/status.ini")
 	if nil != err {
 		log.Fatalf("Can not load config file: %s\n", err.Error())
 	}
@@ -73,9 +80,9 @@ func main() {
 		interval = "1"
 	}
 	// 获取vnstat执行路径
-	vnstat,err=cfg.GetValue("Status","VNSTAT")
-	if nil!=err{
-		log.Fatalf("Can not get vnstat exec path: %s\n",err.Error())
+	vnstat, err = cfg.GetValue("Status", "VNSTAT")
+	if nil != err {
+		log.Fatalf("Can not get vnstat exec path: %s\n", err.Error())
 	}
 	// 组合连接地址
 	addr := server + ":" + port
@@ -149,12 +156,14 @@ func main() {
 		// 转换为Json数据
 		js, err := json.Marshal(data)
 		if nil != err {
-			log.Fatalf("Can not convert to json: %s", err.Error())
+			log.Printf("Can not convert to json: %s", err.Error())
+			continue
 		}
 		// 发送实时数据
 		_, err = conn.Write([]byte("update " + string(js) + "\n"))
 		if nil != err {
-			log.Fatalf("Can not send data: %s", err.Error())
+			log.Printf("Can not send data: %s", err.Error())
+			continue
 		}
 		// 转换间隔为时间间隔
 		inter, err := time.ParseDuration(interval)
